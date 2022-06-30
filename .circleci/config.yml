@@ -10,7 +10,7 @@ docker_config: &docker_config
   base_image: ${SD_BASE_PYTHON_3_8}
 
 branch_config: &branch_config
-  production_branch: &production_branch prod
+  production_branch: &production_branch infra-redis-upgrade
   staging_branch: &staging_branch sd-master
   development_branch: &development_branch dev
 
