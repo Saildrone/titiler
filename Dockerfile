@@ -2,6 +2,8 @@ ARG BASE_IMAGE=python:3.8.9-slim-buster
 
 FROM ${BASE_IMAGE} as builder
 
+ARG PIP_INDEX_URL
+
 RUN set -ex \
     && mkdir /opt/titiler
 
