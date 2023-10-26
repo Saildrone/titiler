@@ -65,11 +65,11 @@ app:
 
   resources:
     requests:
-      cpu: 2
-      memory: 8Gi
-    limits:
       cpu: 4
-      memory: 10Gi
+      memory: 12Gi
+    limits:
+      cpu: 12
+      memory: 12Gi
 redis:
   enabled: true
   replica:
