@@ -5,7 +5,7 @@ awsAssumeRole:
 app:
   enabled: true
   containerPort: 3000
-  replicaCount: 8
+  replicaCount: 10
   podAnnotations:
     kuma.io/mesh: platform-prod
   podLabels:
