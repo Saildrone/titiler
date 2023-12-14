@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  k8s-build-deploy: saildrone/k8s-build-deploy@0.1
+  k8s-build-deploy: saildrone/k8s-build-deploy@0.2
 
 fingerprint: &fingerprint
   "13:a6:81:74:d7:d6:6a:32:47:32:aa:f5:f0:48:3f:64"
