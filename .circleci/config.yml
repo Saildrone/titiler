@@ -3,9 +3,6 @@ version: 2.1
 orbs:
   k8s-build-deploy: saildrone/k8s-build-deploy@0.2
 
-fingerprint: &fingerprint
-  "13:a6:81:74:d7:d6:6a:32:47:32:aa:f5:f0:48:3f:64"
-
 docker_config: &docker_config
   base_image: ${SD_BASE_PYTHON_3_8}
 
@@ -28,13 +25,11 @@ workflows:
   build_and_test:
     jobs:
       - k8s-build-deploy/build-lint-manifest:
-          circleci_ssh_fingerprint: *fingerprint
           <<: *branch_config
           context: *context
           <<: *filter_config
 
       - k8s-build-deploy/build-push-image:
-          circleci_ssh_fingerprint: *fingerprint
           docker_layer_caching_enabled: false
           <<: *docker_config
           <<: *branch_config
@@ -42,7 +37,6 @@ workflows:
           <<: *filter_config
 
       - k8s-build-deploy/deploy-k8s-manifests:
-          circleci_ssh_fingerprint: *fingerprint
           <<: *branch_config
           context: *context
           requires:
