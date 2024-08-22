@@ -1,8 +1,12 @@
-ARG BASE_IMAGE=python:3.8.9-slim-buster
+ARG BASE_IMAGE=026314688606.dkr.ecr.us-west-2.amazonaws.com/python:3.8
 
-FROM ${BASE_IMAGE} as builder
+FROM ${BASE_IMAGE} as runtime
 
 ARG PIP_INDEX_URL
+ENV PYTHONUNBUFFERED 1
+
+ARG CODEARTIFACT_AUTH_TOKEN
+ENV PIP_INDEX_URL "https://aws:${CODEARTIFACT_AUTH_TOKEN}@sd-package-repo-026314688606.d.codeartifact.us-west-2.amazonaws.com/pypi/sd-package-repo/simple/"
 
 RUN set -ex \
     && mkdir /opt/titiler

@@ -1,0 +1,18 @@
+apiVersion: v2
+description: Infrastructure Deployment Chart
+name: titiler
+version: 0.0.1
+appVersion: 1.0
+home: https://github.com/Saildrone/titiler.git
+sources:
+  - https://github.com/Saildrone/helm.charts
+maintainers:
+  - name: "data"
+dependencies:
+  - name: saildrone-service
+    repository: oci://026314688606.dkr.ecr.us-west-2.amazonaws.com
+    version: ~0.0.14
+  - name: datadog-monitors
+    repository: oci://026314688606.dkr.ecr.us-west-2.amazonaws.com
+    alias: monitors
+    version: ~0.0.12
