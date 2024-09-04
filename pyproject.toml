@@ -5,3 +5,4 @@ description = "Automated background task service."
 authors = ["SW-Data <sw-data@saildrone.com>"]
 repository = "https://github.com/Saildrone/titiler"
 license = "Proprietary"
+
