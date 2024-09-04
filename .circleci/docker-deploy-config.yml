@@ -49,14 +49,14 @@ tags: &tags
     branches:
       ignore: /.*/
     tags:
-      only: /^\d+\.\d+\.\d+$/
+      only: /^\d+\.\d+\.\d+-saildrone$/
 feature-branches-and-tags: &feature-branches-and-tags
   filters:
     branches:
       ignore:
         - sd-master
     tags:
-      only: /^\d+\.\d+\.\d+$/
+      only: /^\d+\.\d+\.\d+-saildrone$/
 main-branch: &main-branch
   filters:
     branches:
