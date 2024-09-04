@@ -2,6 +2,6 @@
 name = "titiler"
 version = "0.1.0"
 description = "Automated background task service."
-authors = ["Jeff Wang <jeff@saildrone.com>"]
+authors = ["SW-Data <sw-data@saildrone.com>"]
 repository = "https://github.com/Saildrone/titiler"
 license = "Proprietary"
