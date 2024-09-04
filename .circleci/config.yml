@@ -1,51 +1,81 @@
 version: 2.1
 
+setup: true
+
+parameters:
+  base-revision:
+    type: string
+    default: "sd-master"
+  docker-release-suffix:
+    type: string
+    default: "-pre"
+  package-manager: 
+    type: string
+    default: "poetry"
+
 orbs:
-  k8s-build-deploy: saildrone/k8s-build-deploy@0.1
+  path-filtering: circleci/path-filtering@0.1.3
+  continuation: circleci/continuation@0.3.1
+  docker-build-deploy: saildrone/docker-build-deploy@dev:bd-allow-for-alternate-codebase-directories
 
-fingerprint: &fingerprint
-  "13:a6:81:74:d7:d6:6a:32:47:32:aa:f5:f0:48:3f:64"
+commands:
+  set-continued-config:
+    parameters:
+      pipeline-parameters-json-file:
+        type: string
+        default: /tmp/pipeline-parameters.json
+      configuration-path:
+        type: string
+        default: .circleci/continue.yml
+      lookup-key:
+        type: string
+        description: key to look up the filepath for the next config
+    steps:
+      - run:
+          name: Set next config as << parameters.configuration-path >>
+          command: |
+            cp $(jq -r '.<< parameters.lookup-key >>' << parameters.pipeline-parameters-json-file >>) << parameters.configuration-path >>
+            # debug: confirm next config
+            cat << parameters.configuration-path >>
+      - run:
+          name: Pop << parameters.lookup-key >> key from << parameters.pipeline-parameters-json-file >>
+          command: |
+            jq 'del(.<< parameters.lookup-key >>)' << parameters.pipeline-parameters-json-file >> > params.json
+            rm << parameters.pipeline-parameters-json-file >>
+            cp params.json << parameters.pipeline-parameters-json-file >>
+            # debug: confirm contents
+            jq '.' << parameters.pipeline-parameters-json-file >>
+      - docker-build-deploy/deploy-branch-suffix:
+          execution-branch: << pipeline.git.branch >>
+          package-manager: << pipeline.parameters.package-manager >>
+          docker-release-suffix: << pipeline.parameters.docker-release-suffix >>
+          pipeline-parameters-json-file: << parameters.pipeline-parameters-json-file >>
+          base-revision: << pipeline.parameters.base-revision >>
+          app-directory: ""
 
-docker_config: &docker_config
-  base_image: ${SD_BASE_PYTHON_3_8}
-
-branch_config: &branch_config
-  production_branch: &production_branch prod
-  staging_branch: &staging_branch sd-master
-  development_branch: &development_branch dev
-
-context: &context platform-k8s
-
-filter_config: &filter_config
-  filters:
-    branches:
-      only:
-        - *production_branch
-        - *staging_branch
-        - *development_branch
+jobs:
+  job-filter:
+    executor: path-filtering/default
+    steps:
+      - checkout
+      - path-filtering/set-parameters:
+          base-revision: << pipeline.parameters.base-revision >>
+          mapping: |
+            .* config ".circleci/docker-deploy-config.yml"
+            .* app-updated true
+            kubernetes/.* config ".circleci/docker-deploy-config.yml"
+            kubernetes/.* k8s-updated true
+      - set-continued-config:
+          lookup-key: config
+      - continuation/continue:
+          circleci_domain: circleci.saildrone.com
+          configuration_path: .circleci/continue.yml
+          parameters: /tmp/pipeline-parameters.json
 
 workflows:
-  build_and_test:
+  Setup:
     jobs:
-      - k8s-build-deploy/build-lint-manifest:
-          circleci_ssh_fingerprint: *fingerprint
-          <<: *branch_config
-          context: *context
-          <<: *filter_config
-
-      - k8s-build-deploy/build-push-image:
-          circleci_ssh_fingerprint: *fingerprint
-          docker_layer_caching_enabled: false
-          <<: *docker_config
-          <<: *branch_config
-          context: *context
-          <<: *filter_config
-
-      - k8s-build-deploy/deploy-k8s-manifests:
-          circleci_ssh_fingerprint: *fingerprint
-          <<: *branch_config
-          context: *context
-          requires:
-            - k8s-build-deploy/build-push-image
-            - k8s-build-deploy/build-lint-manifest
-          <<: *filter_config
+      - job-filter:
+          filters:
+            tags:
+              only: /^\d+\.\d+\.\d+$/

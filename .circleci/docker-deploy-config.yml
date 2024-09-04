@@ -1,0 +1,151 @@
+version: 2.1
+
+parameters:
+  lambda-updated:
+    type: boolean
+    default: false
+  app-updated:
+    type: boolean
+    default: false
+  k8s-updated:
+    type: boolean
+    default: false
+  docker-release:
+    type: boolean
+    default: false
+  context:
+    type: string
+    default: "platform-k8s"
+  tag-suffix:
+    type: string
+    default: "-saildrone"
+  autosync:
+    type: enum
+    enum: ["enabled","disabled"]
+    default: "enabled"
+ 
+orbs:
+  docker-build-deploy: saildrone/docker-build-deploy@dev:bd-allow-for-alternate-codebase-directories
+  aws-cli: circleci/aws-cli@3.1.4
+  sd-helpers: saildrone/sd-helpers@0.0.13
+  aws-ecr: circleci/aws-ecr@8.2.1
+
+ecr-login: &ecr-login
+  aws-ecr/ecr-login:
+    aws-access-key-id: ECR_KEY_ID
+    aws-secret-access-key: ECR_ACCESS_KEY
+    region: "us-west-2"
+
+feature-branches: &feature-branches
+  filters:
+    branches:
+      ignore:
+        - sd-master
+tags: &tags
+  filters:
+    branches:
+      ignore: /.*/
+    tags:
+      only: /^\d+\.\d+\.\d+$/
+feature-branches-and-tags: &feature-branches-and-tags
+  filters:
+    branches:
+      ignore:
+        - sd-master
+    tags:
+      only: /^\d+\.\d+\.\d+$/
+main-branch: &main-branch
+  filters:
+    branches:
+      only:
+        - sd-master
+
+workflows:
+  "Check App Version":
+    when: << pipeline.parameters.app-updated >>
+    jobs:
+      - docker-build-deploy/check-version:
+          execution-branch: << pipeline.git.branch >>
+          context: << pipeline.parameters.context >>
+          tag-suffix: << pipeline.parameters.tag-suffix >>
+          app-directory: ""
+          <<: *feature-branches
+  "Cut Git Tag":
+    when: << pipeline.parameters.app-updated >>
+    jobs:
+      - docker-build-deploy/cut-tag:
+          execution-branch: << pipeline.git.branch >>
+          context: << pipeline.parameters.context >>
+          tag-suffix: << pipeline.parameters.tag-suffix >>
+          app-directory: ""
+          <<: *main-branch
+
+  "Docker Deploy Pipeline":
+    when:
+      and: # All must be true to trigger
+        - << pipeline.parameters.app-updated >>
+        - equal: [ true, << pipeline.parameters.docker-release >> ]
+    jobs:
+      - docker-build-deploy/docker-build-push:
+          name: "Docker Build and Push"
+          context: << pipeline.parameters.context >>
+          k8s-image: true
+          lambda-image: false
+          k8s-dockerfile-path: ""
+          <<: *feature-branches-and-tags
+
+      # DEPLOYS FEATURE TO STAGING
+      - docker-build-deploy/k8s-deploy:
+          name: "Deploying Feature to Staging k8s"
+          context: << pipeline.parameters.context >>
+          values-file: platform-staging.yaml
+          autosync: << pipeline.parameters.autosync >>
+          requires:
+            - "Docker Build and Push"
+          <<: *feature-branches
+      - docker-build-deploy/k8s-deploy:
+          name: "Deploying Staging k8s"
+          context: << pipeline.parameters.context >>
+          values-file: platform-staging.yaml
+          autosync: << pipeline.parameters.autosync >>
+          requires:
+            - "Docker Build and Push"
+          <<: *tags
+      - "Deploy Prod k8s?":
+          type: approval
+          requires:
+            - "Deploying Staging k8s"
+          <<: *tags
+      - docker-build-deploy/k8s-deploy:
+          name: "Deploying Prod k8s"
+          context: << pipeline.parameters.context >>
+          values-file: platform-prod.yaml
+          autosync: << pipeline.parameters.autosync >>
+          <<: *tags
+          requires:
+            - "Deploy Prod k8s?"
+  "Update Kubernetes In Place":
+    when:
+      and:
+        - equal: [ true, << pipeline.parameters.k8s-updated >> ]
+        - not: << pipeline.parameters.app-updated >>
+        - equal: [ true, << pipeline.parameters.docker-release >> ]
+
+    jobs:
+      - docker-build-deploy/k8s-deploy:
+          name: "Deploying Staging k8s"
+          context: << pipeline.parameters.context >>
+          values-file: platform-staging.yaml
+          <<: *main-branch
+      - "Deploy Prod k8s?":
+          type: approval
+          requires:
+            - "Deploying Staging k8s"
+          <<: *main-branch
+      - docker-build-deploy/k8s-deploy:
+          name: "Deploying Prod k8s"
+          context: << pipeline.parameters.context >>
+          values-file: platform-prod.yaml
+          <<: *main-branch
+          requires:
+            - "Deploy Prod k8s?"
