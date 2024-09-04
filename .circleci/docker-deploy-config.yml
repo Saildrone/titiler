@@ -1,6 +1,9 @@
 version: 2.1
 
 parameters:
+  base-revision:
+    type: string
+    default: "sd-master"
   lambda-updated:
     type: boolean
     default: false
@@ -78,6 +81,7 @@ workflows:
           context: << pipeline.parameters.context >>
           tag-suffix: << pipeline.parameters.tag-suffix >>
           app-directory: ""
+          base-revision: << pipeline.parameters.base-revision >>
           <<: *main-branch
 
   "Docker Deploy Pipeline":
